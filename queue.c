@@ -6,7 +6,9 @@
 #include "queue.h"
 
 
-queue_t *merge(queue_t *left, queue_t *right, queue_t *q);
+list_ele_t *merge_sort(list_ele_t *head);
+static list_ele_t *merge(list_ele_t *left, list_ele_t *right);
+
 /*
  * Create empty queue.
  * Return NULL if could not allocate space.
@@ -165,19 +167,6 @@ void q_reverse(queue_t *q)
     q->head = prev;
 }
 
-//  compares two strings character by character.
-static bool is_less_then(list_ele_t *x, list_ele_t *y)
-{
-    if (!x)
-        return true;
-    if (!y)
-        return false;
-
-    if (strcmp(x->value, y->value) < 0)
-        return true;
-    else
-        return false;
-}
 
 /*
  * Sort elements of queue in ascending order
@@ -186,52 +175,48 @@ static bool is_less_then(list_ele_t *x, list_ele_t *y)
  */
 void q_sort(queue_t *q)
 {
-    if (!q || q->qsize < 2)
+    if (!q)
         return;
-
-    queue_t left, right;
-    left.qsize = q->qsize / 2 + (q->qsize & 1);
-    right.qsize = q->qsize / 2;
-
-    list_ele_t *cur = left.head = q->head;
-    right.tail = q->tail;
-
-    for (int i = 0; i < left.qsize - 1; i++)
-        cur = cur->next;
-
-    left.tail = cur;
-    right.head = cur->next;
-    left.tail->next = right.tail->next = NULL;
-    q->head = q->tail = NULL;
-
-    q_sort(&left);
-    q_sort(&right);
-    merge(&left, &right, q);
+    if (q->qsize <= 1)
+        return;
+    q->head = merge_sort(q->head);
+    while (q->tail->next)
+        q->tail = q->tail->next;
 }
 
-queue_t *merge(queue_t *left, queue_t *right, queue_t *q)
+list_ele_t *merge_sort(list_ele_t *head)
 {
-    q->qsize = left->qsize + right->qsize;
-    list_ele_t *l = left->head, *r = right->head;
-    list_ele_t *tmp = NULL;
+    if (!head || !head->next)
+        return head;
 
-    if (is_less_then(left->head, right->head))
-        q->head = left->head;
-    else
-        q->head = right->head;
+    list_ele_t *slow = head, *fast;
+    for (fast = head->next; fast && fast->next; fast = fast->next->next)
+        slow = slow->next;
 
-    q->tail = q->head;
-    for (int i = 0; i < q->qsize; i++) {
-        if (!r || (l && is_less_then(l, r))) {
-            tmp = l;
-            l = l->next;
-        } else {
-            tmp = r;
-            r = r->next;
+    list_ele_t *mid = slow->next;
+    slow->next = NULL;
+    return merge(merge_sort(head), merge_sort(mid));
+}
+
+static list_ele_t *merge(list_ele_t *left, list_ele_t *right)
+{
+    list_ele_t *head = NULL;
+    for (list_ele_t **iter = &head; true; iter = &((*iter)->next)) {
+        if (!left) {
+            *iter = right;
+            break;
         }
-        q->tail->next = tmp;
-        q->tail = tmp;
+        if (!right) {
+            *iter = left;
+            break;
+        }
+        if (strcmp(left->value, right->value) < 0) {
+            *iter = left;
+            left = left->next;
+        } else {
+            *iter = right;
+            right = right->next;
+        }
     }
-    tmp->next = NULL;
-    return q;
+    return head;
 }
